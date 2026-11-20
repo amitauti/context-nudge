@@ -1,6 +1,6 @@
 ---
 name: context-nudge
-description: Keeps a terse session ledger in .claude/session-ledger.md, updated at checkpoints (decision made, task finished, direction change). Also checks for a heavy session itself at checkpoints. On /context-nudge or a "context-nudge:" hook message, writes .claude/handoff.md and nudges the user to /clear then /context-restart. Never clears or compacts on its own.
+description: Keeps a short session ledger in .claude/session-ledger.md. Use this skill (invoke it) whenever the user states a decision, a constraint or preference, finishes a task, or changes direction, and whenever the session has become long or heavy (many turns, big tool outputs). Also use on /context-nudge. Updates the ledger, and when the session is heavy writes .claude/handoff.md and offers /clear then /context-restart. Never clears or compacts on its own.
 ---
 
 # context-nudge
@@ -36,7 +36,7 @@ Never drop an open item, an unresolved blocker, a user-stated constraint, or the
 
 ## Check for heaviness yourself
 
-Nothing measures the session for you unless the optional `context-nudge-hook` add-on is installed, so do it yourself. At each checkpoint (and after any unusually long tool output), ask: has this session had many turns (roughly 30+), several large tool outputs or file reads, or a long exploration that is now settled? If so, treat it like the manual trigger below: update the ledger, write the handoff, and offer the choice once. Offer at most once per session unless the user asks again or the situation changes a lot.
+Nothing measures the session for you unless the optional `context-nudge-hook` add-on is installed, so do it yourself. At each checkpoint (and after any unusually long tool output), ask: has this session had many turns (roughly 20+), four or more large tool outputs or file reads, or a long exploration that is now settled? If so, follow the manual trigger below in full: update the ledger, write `.claude/handoff.md` first (so `/clear` is safe the moment the user agrees), then offer the choice. Offer exactly once per session: after that, say nothing more about restarting or about the handoff being out of date unless the user asks (they can run `/context-nudge` any time). Never say "I can write a handoff": write it, then offer. Do not offer on short sessions.
 
 ## Manual trigger: `/context-nudge`
 
