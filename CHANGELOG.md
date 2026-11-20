@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Added a plugin icon (`.claude-plugin/icon.png`, 512x512), regenerable with `node tools/make-icon.js`.
+
 ## 0.2.0
 
 - Marketplace-ready: added `.claude-plugin/marketplace.json` (`/plugin marketplace add amitauti/context-nudge`, then `/plugin install context-nudge@amitauti-plugins`) and fixed the README install line.

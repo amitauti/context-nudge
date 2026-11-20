@@ -4,9 +4,9 @@ Submission is done by the repository owner in the developer portal, https://clau
 
 ## Before you submit
 
-1. Merge the PR that adds this file, so the default branch carries `.claude-plugin/marketplace.json`, the 0.2.0 manifest and the README.
-2. Make sure `claude plugin validate . --strict` is clean on the default branch (the only expected output is the icon note below).
-3. Optional: add a square 512-2048 px PNG at `.claude-plugin/icon.png`. The directory reads it once, at first submission; it cannot be changed afterwards. Validation warns `ICON_MISSING` without it, but it does not block.
+1. Merge the PR that adds this file, so the default branch carries `.claude-plugin/marketplace.json`, the 0.2.1 manifest and the README.
+2. Make sure `claude plugin validate . --strict` is clean on the default branch (it should report nothing).
+3. The icon is `.claude-plugin/icon.png` (512x512, regenerate with `node tools/make-icon.js`). The directory reads it once, at first submission; it cannot be changed afterwards. Validation warns `ICON_MISSING` if it is absent.
 
 ## Source step
 
