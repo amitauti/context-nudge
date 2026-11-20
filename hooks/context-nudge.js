@@ -7,32 +7,55 @@ const path = require("path");
 
 const LIMIT = Number(process.env.CONTEXT_NUDGE_TOKENS) || 150000;
 const WORD_CAP = 250;
-const TAIL_BYTES = 256 * 1024; // shortcut: assumes the last assistant entry is in the tail, raise if long tool outputs push it out
+const CHUNK = 256 * 1024;
+const SCAN_CAP = 64 * 1024 * 1024; // bound the hook's latency on pathological transcripts
 
-// Last main-thread assistant request with real usage = current context size (sidechains are subagents).
-function contextTokens(file) {
+// Walks the transcript's lines newest-first, reading the file backwards in chunks. Lines are
+// split on raw 0x0A bytes and decoded only once complete, so a multi-byte character cut by a
+// chunk boundary can't corrupt a line. Stops when `visit` returns something other than undefined.
+function scanLinesBackwards(file, visit) {
   const fd = fs.openSync(file, "r");
-  let text;
   try {
-    const size = fs.fstatSync(fd).size;
-    const len = Math.min(size, TAIL_BYTES);
-    const buf = Buffer.alloc(len);
-    fs.readSync(fd, buf, 0, len, size - len);
-    text = buf.toString("utf8");
+    let pos = fs.fstatSync(fd).size;
+    const floor = Math.max(0, pos - SCAN_CAP);
+    let parts = []; // pieces, in file order, of a line whose start is still in an earlier chunk
+    while (pos > floor) {
+      const len = Math.min(CHUNK, pos - floor);
+      pos -= len;
+      const chunk = Buffer.alloc(len);
+      fs.readSync(fd, chunk, 0, len, pos);
+      let end = len;
+      for (let nl = chunk.lastIndexOf(10, end - 1); nl !== -1; nl = end > 0 ? chunk.lastIndexOf(10, end - 1) : -1) {
+        const r = visit(Buffer.concat([chunk.subarray(nl + 1, end), ...parts]));
+        if (r !== undefined) return r;
+        parts = [];
+        end = nl;
+      }
+      parts.unshift(chunk.subarray(0, end));
+    }
+    if (pos === 0) return visit(Buffer.concat(parts)); // the first line of the file
   } finally {
     fs.closeSync(fd);
   }
-  const lines = text.split("\n");
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (!lines[i]) continue;
+}
+
+// Current context size from the last main-thread assistant request with real usage (sidechains are
+// subagents). A compaction after it makes that usage stale, so the boundary's postTokens wins.
+// Any read problem gives 0: no token signal, never an error.
+function contextTokens(file) {
+  const visit = (line) => {
+    if (!line.includes('"usage"') && !line.includes("compact_boundary")) return undefined; // skip big tool outputs cheaply
     let e;
-    try { e = JSON.parse(lines[i]); } catch { continue; } // first line of the tail may be cut mid-JSON
+    try { e = JSON.parse(line.toString("utf8")); } catch { return undefined; }
+    if (e.type === "system" && e.subtype === "compact_boundary") {
+      return Number(e.compactMetadata && e.compactMetadata.postTokens) || 0;
+    }
     const u = e.type === "assistant" && !e.isSidechain && e.message && e.message.usage;
-    if (!u) continue;
+    if (!u) return undefined;
     const n = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-    if (n > 0) return n; // zero-usage entries are synthetic/error rows
-  }
-  return 0;
+    return n > 0 ? n : undefined; // zero-usage entries are synthetic/error rows
+  };
+  try { return scanLinesBackwards(file, visit) || 0; } catch { return 0; }
 }
 
 function ledgerWords(file) {

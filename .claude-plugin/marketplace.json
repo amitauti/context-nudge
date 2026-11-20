@@ -1,0 +1,15 @@
+{
+  "name": "amitauti-plugins",
+  "description": "Plugins by amitauti",
+  "owner": {
+    "name": "Amit",
+    "url": "https://github.com/amitauti"
+  },
+  "plugins": [
+    {
+      "name": "context-nudge",
+      "source": "./",
+      "description": "Keeps a terse session ledger and nudges you to /clear then /context-restart when a session gets heavy. Never clears or compacts on its own."
+    }
+  ]
+}
