@@ -1,0 +1,6 @@
+{
+  "name": "context-nudge",
+  "version": "0.1.0",
+  "description": "Keeps a terse session ledger and nudges you to /clear then /context-restart when a session gets heavy. Never clears or compacts on its own.",
+  "keywords": ["context", "session", "handoff", "ledger"]
+}
