@@ -1,6 +1,6 @@
 # context-nudge-hook
 
-Optional add-on for the [`context-nudge`](../context-nudge) skills plugin. A `UserPromptSubmit` hook that measures context size and, when it reaches the limit or the ledger passes 250 words, tells Claude to run the context-nudge skill. Once per session per reason. It never clears or compacts anything itself.
+Optional add-on for the [`context-nudge`](../context-nudge) skills plugin. A `UserPromptSubmit` hook that measures context size and, when it reaches the limit or the ledger passes 250 words, tells Claude to run the context-nudge skill. Once per session per reason. It never clears or compacts anything itself. The skills alone only judge heaviness at decisions and finished tasks; the hook is what catches a long stretch with neither.
 
 Install it **alongside** `context-nudge`: its messages tell Claude to follow the `context-nudge` skill, which lives in that plugin.
 

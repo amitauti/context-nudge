@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- Tested the skills-only plugin end to end with real `claude -p` sessions (results in `docs/TESTING.md`; rerun with `docs/test-skills.sh`).
+- Fix: the `context-nudge` skill description now says plainly when to invoke it (a decision, constraint, finished task, direction change, or a long/heavy session). The old wording was often ignored, so no ledger was written.
+- Fix: the heaviness check now writes the handoff before offering `/clear`, and uses lower, countable thresholds (about 20 turns, or 4 large outputs).
+- Fix: `/context-restart` waits for an answer before reading files or compacting when the handoff is stale or undated, also checks the ledger's age when it falls back to it, and no longer searches the rest of the machine for missing files.
+- README: a plain-language "How to use it in 60 seconds" section; notes on the `.claude` permission prompt and on what the skills alone can miss.
+
 ## 0.3.0
 
 - Restructured into two plugins in one marketplace so the skills can go in the Anthropic directory: `plugins/context-nudge` (skills only, no hook, no scripts) and `plugins/context-nudge-hook` (the optional `UserPromptSubmit` hook, installable from this marketplace; the directory accepts command hooks only from verified organizations).
