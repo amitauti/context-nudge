@@ -225,27 +225,57 @@ test("cli: fails open on garbage or empty stdin (exit 0, nothing on stdout)", ()
 
 // ---- packaging --------------------------------------------------------------
 
-const ROOT = path.join(__dirname, "..");
-const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), "utf8"));
+const REPO = path.join(__dirname, "..", "..", "..");
+const readJson = (p) => JSON.parse(fs.readFileSync(path.join(REPO, p), "utf8"));
+const PLUGINS = ["context-nudge", "context-nudge-hook"];
 
-test("manifests: plugin.json and marketplace.json agree and carry listing metadata", () => {
-  const plugin = readJson(".claude-plugin/plugin.json");
+test("manifests: marketplace lists both plugins and each plugin.json carries listing metadata", () => {
   const market = readJson(".claude-plugin/marketplace.json");
-  const entry = market.plugins.find((p) => p.name === plugin.name);
-  assert.ok(entry, "marketplace lists the plugin under its manifest name");
-  assert.strictEqual(entry.source, "./");
-  assert.ok(market.owner && market.owner.name);
-  for (const k of ["version", "description", "license", "repository", "homepage"]) assert.ok(plugin[k], `plugin.json ${k}`);
-  assert.ok(plugin.author && plugin.author.name, "plugin.json author.name");
-  assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
-  assert.ok(!entry.version, "version lives in plugin.json only (plugin.json wins and validate warns on both)");
-  assert.match(fs.readFileSync(path.join(ROOT, "CHANGELOG.md"), "utf8"), new RegExp("## " + plugin.version.replace(/\./g, "\\.")));
+  assert.strictEqual(market.name, "amitauti-plugins");
+  assert.strictEqual(market.owner.name, "amitauti");
+  for (const name of PLUGINS) {
+    const plugin = readJson(`plugins/${name}/.claude-plugin/plugin.json`);
+    const entry = market.plugins.find((p) => p.name === plugin.name);
+    assert.ok(entry, `marketplace lists ${name}`);
+    assert.strictEqual(plugin.name, name);
+    assert.strictEqual(entry.source, `./plugins/${name}`);
+    for (const k of ["version", "description", "license", "repository", "homepage"]) assert.ok(plugin[k], `${name} plugin.json ${k}`);
+    assert.strictEqual(plugin.author.name, "amitauti");
+    assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(!entry.version, "version lives in plugin.json only");
+    assert.match(fs.readFileSync(path.join(REPO, "CHANGELOG.md"), "utf8"), new RegExp("## " + plugin.version.replace(/\./g, "\\.")));
+  }
 });
 
-test("README install line matches the marketplace name", () => {
+test("skills plugin is skills only: no hooks, scripts, or non-text files besides the icon", () => {
+  const dir = path.join(REPO, "plugins", "context-nudge");
+  const files = [];
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, e.name);
+      e.isDirectory() ? walk(f) : files.push(f);
+    }
+  })(dir);
+  for (const f of files) {
+    const rel = path.relative(dir, f);
+    assert.ok(!/hooks|\.mcp|\.js$|\.sh$/.test(rel), `unexpected file ${rel}`);
+    const buf = fs.readFileSync(f);
+    if (rel.endsWith(".png")) continue;
+    assert.ok(!buf.includes(0), `${rel} has a NUL byte`);
+    assert.ok(!buf.slice(0, 2).equals(Buffer.from("#!")), `${rel} starts with #!`);
+  }
+});
+
+test("skill tells Claude to check for heaviness itself (works without the hook)", () => {
+  const skill = fs.readFileSync(path.join(REPO, "plugins/context-nudge/skills/context-nudge/SKILL.md"), "utf8");
+  assert.match(skill, /Check for heaviness yourself/);
+});
+
+test("READMEs: install lines match the marketplace name", () => {
   const market = readJson(".claude-plugin/marketplace.json");
-  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-  assert.ok(readme.includes(`/plugin marketplace add amitauti/context-nudge`));
-  assert.ok(readme.includes(`/plugin install context-nudge@${market.name}`));
-  assert.ok(!readme.includes("claude plugin install context-nudge\n"), "the old, wrong install line is gone");
+  for (const name of PLUGINS) {
+    const readme = fs.readFileSync(path.join(REPO, "plugins", name, "README.md"), "utf8");
+    assert.ok(readme.includes("/plugin marketplace add amitauti/context-nudge"));
+    assert.ok(readme.includes(`/plugin install ${name}@${market.name}`));
+  }
 });

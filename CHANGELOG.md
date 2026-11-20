@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Restructured into two plugins in one marketplace so the skills can go in the Anthropic directory: `plugins/context-nudge` (skills only, no hook, no scripts) and `plugins/context-nudge-hook` (the optional `UserPromptSubmit` hook, installable from this marketplace; the directory accepts command hooks only from verified organizations).
+- The `context-nudge` skill now checks for a heavy session itself at checkpoints, so it is useful without the hook.
+- Author and marketplace owner are now `amitauti`; repository and homepage URLs on both plugins.
+- Install `context-nudge-hook` with `/plugin install context-nudge-hook@amitauti-plugins`. Existing 0.2.x users: the hook now lives in that separate plugin.
+- Added the plugin icon (`plugins/context-nudge/.claude-plugin/icon.png`, 512x512), regenerable with `node tools/make-icon.js`.
+
 ## 0.2.1
 
 - Added a plugin icon (`.claude-plugin/icon.png`, 512x512), regenerable with `node tools/make-icon.js`.

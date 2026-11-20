@@ -1,6 +1,6 @@
 ---
 name: context-nudge
-description: Keeps a terse session ledger in .claude/session-ledger.md, updated at checkpoints (decision made, task finished, direction change). On /context-nudge or a "context-nudge:" hook message, writes .claude/handoff.md and nudges the user to /clear then /context-restart. Never clears or compacts on its own.
+description: Keeps a terse session ledger in .claude/session-ledger.md, updated at checkpoints (decision made, task finished, direction change). Also checks for a heavy session itself at checkpoints. On /context-nudge or a "context-nudge:" hook message, writes .claude/handoff.md and nudges the user to /clear then /context-restart. Never clears or compacts on its own.
 ---
 
 # context-nudge
@@ -33,6 +33,10 @@ Compact in place, in this order, until under the cap:
 4. Cut wording, not facts: fragments, no articles, no decision history.
 
 Never drop an open item, an unresolved blocker, a user-stated constraint, or the next step. If still over the cap after 1-4, do not silently drop anything: tell the user which items would go and ask.
+
+## Check for heaviness yourself
+
+Nothing measures the session for you unless the optional `context-nudge-hook` add-on is installed, so do it yourself. At each checkpoint (and after any unusually long tool output), ask: has this session had many turns (roughly 30+), several large tool outputs or file reads, or a long exploration that is now settled? If so, treat it like the manual trigger below: update the ledger, write the handoff, and offer the choice once. Offer at most once per session unless the user asks again or the situation changes a lot.
 
 ## Manual trigger: `/context-nudge`
 
