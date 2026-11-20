@@ -2,14 +2,19 @@
   "name": "amitauti-plugins",
   "description": "Plugins by amitauti",
   "owner": {
-    "name": "Amit",
+    "name": "amitauti",
     "url": "https://github.com/amitauti"
   },
   "plugins": [
     {
       "name": "context-nudge",
-      "source": "./",
-      "description": "Keeps a terse session ledger and nudges you to /clear then /context-restart when a session gets heavy. Never clears or compacts on its own."
+      "source": "./plugins/context-nudge",
+      "description": "Keeps a terse session ledger and offers a clean restart (/clear, then /context-restart) when a session gets heavy. Skills only; never clears or compacts on its own."
+    },
+    {
+      "name": "context-nudge-hook",
+      "source": "./plugins/context-nudge-hook",
+      "description": "Optional add-on for context-nudge: a UserPromptSubmit hook that measures context size and triggers the nudge automatically. Requires Node.js 18+."
     }
   ]
 }

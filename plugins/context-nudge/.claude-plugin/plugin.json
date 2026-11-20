@@ -1,9 +1,9 @@
 {
   "name": "context-nudge",
-  "version": "0.2.0",
-  "description": "Keeps a terse session ledger and nudges you to /clear then /context-restart when a session gets heavy. Never clears or compacts on its own.",
+  "version": "0.3.0",
+  "description": "Keeps a terse session ledger and offers a clean restart (/clear, then /context-restart) when a session gets heavy. Skills only; never clears or compacts on its own.",
   "author": {
-    "name": "Amit",
+    "name": "amitauti",
     "url": "https://github.com/amitauti"
   },
   "homepage": "https://github.com/amitauti/context-nudge#readme",

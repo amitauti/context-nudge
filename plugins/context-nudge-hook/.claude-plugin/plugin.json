@@ -1,0 +1,13 @@
+{
+  "name": "context-nudge-hook",
+  "version": "0.3.0",
+  "description": "Optional add-on for context-nudge: a UserPromptSubmit hook that measures context size and triggers the nudge automatically. Requires Node.js 18+.",
+  "author": {
+    "name": "amitauti",
+    "url": "https://github.com/amitauti"
+  },
+  "homepage": "https://github.com/amitauti/context-nudge#readme",
+  "repository": "https://github.com/amitauti/context-nudge",
+  "license": "MIT",
+  "keywords": ["context", "session", "hook", "ledger"]
+}
