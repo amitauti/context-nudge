@@ -71,3 +71,181 @@ test("run: emits additionalContext JSON, then stays quiet; fails open on bad inp
   assert.strictEqual(run(input), "");
   assert.throws(() => run("not json")); // main() catches this and exits 0
 });
+
+// ---- transcript scanning ----------------------------------------------------
+
+const MB = 1024 * 1024;
+const user = (text) => JSON.stringify({ type: "user", message: { content: text } });
+
+test("finds the last assistant entry when long tool outputs push it past the old 256 KB window", () => {
+  const f = write("long-tail.jsonl", [
+    asst({ input_tokens: 777 }),
+    user("x".repeat(400 * 1024)),
+    user("y".repeat(400 * 1024)),
+    user("z".repeat(400 * 1024)),
+  ]);
+  assert.strictEqual(contextTokens(f), 777);
+});
+
+test("finds the assistant entry behind a single multi-megabyte line", () => {
+  const f = write("huge-line.jsonl", [asst({ input_tokens: 888 }), user("q".repeat(5 * MB))]);
+  assert.strictEqual(contextTokens(f), 888);
+});
+
+test("multi-byte characters straddling a chunk boundary do not corrupt the scan", () => {
+  // Vary the padding so some chunk boundary lands inside a 2-3 byte character.
+  for (let pad = 0; pad < 8; pad++) {
+    const f = write(`utf8-${pad}.jsonl`, [
+      asst({ input_tokens: 4242 }, { note: "é€😀".repeat(40000) + "a".repeat(pad) }),
+      user("é€😀".repeat(100000) + "b".repeat(pad)),
+    ]);
+    assert.strictEqual(contextTokens(f), 4242, `pad=${pad}`);
+  }
+});
+
+test("handles CRLF line endings", () => {
+  const f = path.join(tmp, "crlf.jsonl");
+  fs.writeFileSync(f, [asst({ input_tokens: 5 }), asst({ input_tokens: 6 })].join("\r\n") + "\r\n");
+  assert.strictEqual(contextTokens(f), 6);
+});
+
+test("a last line with no trailing newline and blank trailing lines still parse", () => {
+  const f = path.join(tmp, "noeol.jsonl");
+  fs.writeFileSync(f, asst({ input_tokens: 9 }) + "\n\n\n");
+  assert.strictEqual(contextTokens(f), 9);
+});
+
+test("a transcript with no assistant entry gives 0 even when it is large", () => {
+  const f = write("no-asst.jsonl", [user("a".repeat(2 * MB)), user("b")]);
+  assert.strictEqual(contextTokens(f), 0);
+});
+
+test("a missing, unset or unreadable transcript gives 0 instead of throwing", () => {
+  assert.strictEqual(contextTokens(path.join(tmp, "does-not-exist.jsonl")), 0);
+  assert.strictEqual(contextTokens(undefined), 0);
+  assert.strictEqual(contextTokens(tmp), 0); // a directory
+});
+
+test("after a compaction the stale pre-compact usage is ignored", () => {
+  const boundary = (compactMetadata) => JSON.stringify({ type: "system", subtype: "compact_boundary", compactMetadata });
+  const f = write("compact.jsonl", [
+    asst({ input_tokens: 250000 }),
+    boundary({ trigger: "auto", preTokens: 250000, postTokens: 18000 }),
+    user("summary"),
+  ]);
+  assert.strictEqual(contextTokens(f), 18000);
+  const g = write("compact2.jsonl", [asst({ input_tokens: 250000 }), boundary({ trigger: "manual" }), user("summary")]);
+  assert.strictEqual(contextTokens(g), 0);
+  // an assistant entry after the boundary wins again
+  const h = write("compact3.jsonl", [
+    asst({ input_tokens: 250000 }),
+    boundary({ postTokens: 18000 }),
+    asst({ input_tokens: 20000 }),
+  ]);
+  assert.strictEqual(contextTokens(h), 20000);
+});
+
+// ---- run(): end-to-end behaviour --------------------------------------------
+
+const input = (o) => JSON.stringify({ session_id: "s-" + Math.random().toString(36).slice(2), cwd: tmp, ...o });
+const project = (name, ledgerWordsCount) => {
+  const dir = path.join(tmp, name);
+  fs.mkdirSync(path.join(dir, ".claude"), { recursive: true });
+  if (ledgerWordsCount) fs.writeFileSync(path.join(dir, ".claude", "session-ledger.md"), "word ".repeat(ledgerWordsCount));
+  return dir;
+};
+
+test("run: an unreadable transcript does not hide the over-cap ledger nudge", () => {
+  const dir = project("proj-cap", 300);
+  const out = JSON.parse(run(input({ transcript_path: path.join(tmp, "gone.jsonl"), cwd: dir })));
+  assert.match(out.hookSpecificOutput.additionalContext, /over the 250-word cap/);
+});
+
+test("run: a project with no .claude directory and a missing transcript is quiet, not an error", () => {
+  const dir = path.join(tmp, "bare-project");
+  fs.mkdirSync(dir);
+  assert.strictEqual(run(input({ transcript_path: path.join(tmp, "gone.jsonl"), cwd: dir })), "");
+});
+
+test("run: CLAUDE_PROJECT_DIR wins over the hook's cwd for finding the ledger", () => {
+  const root = project("proj-root", 300);
+  const sub = path.join(root, "packages", "a");
+  fs.mkdirSync(sub, { recursive: true });
+  const prev = process.env.CLAUDE_PROJECT_DIR;
+  process.env.CLAUDE_PROJECT_DIR = root;
+  try {
+    const out = JSON.parse(run(input({ transcript_path: path.join(tmp, "gone.jsonl"), cwd: sub })));
+    assert.match(out.hookSpecificOutput.additionalContext, /over the 250-word cap/);
+  } finally {
+    if (prev === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = prev;
+  }
+});
+
+test("run: two sessions keep separate once-only state", () => {
+  const t = write("two.jsonl", [asst({ input_tokens: 999999 })]);
+  const a = input({ transcript_path: t, session_id: "two-a-" + Date.now() });
+  const b = input({ transcript_path: t, session_id: "two-b-" + Date.now() });
+  assert.match(run(a), /heavy session/);
+  assert.match(run(b), /heavy session/);
+  assert.strictEqual(run(a), "");
+  assert.strictEqual(run(b), "");
+});
+
+test("run: a hostile session id cannot escape the temp directory", () => {
+  const t = write("host.jsonl", [asst({ input_tokens: 999999 })]);
+  assert.match(run(input({ transcript_path: t, session_id: "..\\..\\x/../y" + Date.now() })), /heavy session/);
+  assert.ok(!fs.existsSync(path.join(os.tmpdir(), "..", "y.json")));
+});
+
+test("run: Windows-style transcript path with backslashes is passed straight to fs", () => {
+  // On POSIX a backslash path is just a missing file: must not throw.
+  assert.strictEqual(run(input({ transcript_path: "C:\\Users\\a\\.claude\\projects\\p\\s.jsonl", cwd: tmp })), "");
+});
+
+// ---- CLI contract -----------------------------------------------------------
+
+const { spawnSync } = require("node:child_process");
+const HOOK = path.join(__dirname, "context-nudge.js");
+const cli = (stdin) => spawnSync(process.execPath, [HOOK], { input: stdin, encoding: "utf8" });
+
+test("cli: prints hookSpecificOutput JSON on stdout and exits 0", () => {
+  const t = write("cli.jsonl", [asst({ input_tokens: 999999 })]);
+  const r = cli(input({ transcript_path: t }));
+  assert.strictEqual(r.status, 0);
+  assert.match(JSON.parse(r.stdout).hookSpecificOutput.additionalContext, /heavy session/);
+});
+
+test("cli: fails open on garbage or empty stdin (exit 0, nothing on stdout)", () => {
+  for (const bad of ["not json", ""]) {
+    const r = cli(bad);
+    assert.strictEqual(r.status, 0);
+    assert.strictEqual(r.stdout, "");
+  }
+});
+
+// ---- packaging --------------------------------------------------------------
+
+const ROOT = path.join(__dirname, "..");
+const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), "utf8"));
+
+test("manifests: plugin.json and marketplace.json agree and carry listing metadata", () => {
+  const plugin = readJson(".claude-plugin/plugin.json");
+  const market = readJson(".claude-plugin/marketplace.json");
+  const entry = market.plugins.find((p) => p.name === plugin.name);
+  assert.ok(entry, "marketplace lists the plugin under its manifest name");
+  assert.strictEqual(entry.source, "./");
+  assert.ok(market.owner && market.owner.name);
+  for (const k of ["version", "description", "license", "repository", "homepage"]) assert.ok(plugin[k], `plugin.json ${k}`);
+  assert.ok(plugin.author && plugin.author.name, "plugin.json author.name");
+  assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
+  assert.ok(!entry.version, "version lives in plugin.json only (plugin.json wins and validate warns on both)");
+  assert.match(fs.readFileSync(path.join(ROOT, "CHANGELOG.md"), "utf8"), new RegExp("## " + plugin.version.replace(/\./g, "\\.")));
+});
+
+test("README install line matches the marketplace name", () => {
+  const market = readJson(".claude-plugin/marketplace.json");
+  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  assert.ok(readme.includes(`/plugin marketplace add amitauti/context-nudge`));
+  assert.ok(readme.includes(`/plugin install context-nudge@${market.name}`));
+  assert.ok(!readme.includes("claude plugin install context-nudge\n"), "the old, wrong install line is gone");
+});
