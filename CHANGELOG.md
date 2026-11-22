@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added the Portable Handoff Kit in `kit/` for non-coders (writers, researchers, small-business owners) using ChatGPT, Claude web, Gemini, and other chat apps: 60-second how-to, ledger prompt, restart prompt, heaviness guide, three worked examples, and a feedback issue template.
+
 ## 0.3.1
 
 - Tested the skills-only plugin end to end with real `claude -p` sessions (results in `docs/TESTING.md`; rerun with `docs/test-skills.sh`).
