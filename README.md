@@ -11,4 +11,8 @@ A marketplace (`amitauti-plugins`) with two plugins that keep a short session le
 /plugin marketplace add amitauti/context-nudge
 ```
 
+## Not coding? Use the Portable Handoff Kit
+
+If you use ChatGPT, Claude (web or desktop), Gemini, or other chat apps for writing, research, or business planning, see the **[Long-Chat Handoff Kit](kit/)**. It requires no code, no plugins, and no installation: just two copy-paste prompts that let you restart heavy chats without losing your decisions.
+
 `tools/make-icon.js` regenerates the icon (`node tools/make-icon.js`). MIT licensed; see [CHANGELOG.md](CHANGELOG.md).
