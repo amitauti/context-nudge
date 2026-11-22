@@ -13,7 +13,7 @@ labels: ['handoff-kit', 'feedback']
 
 ### What happened? What worked well, and what broke or felt awkward?
 <!-- 
-- Did the AI follow the 250-word cap and section format?
+- Did the AI follow the 250-word cap and format (date line plus six sections)?
 - Did the restart prompt successfully preserve your decisions and prevent re-explaining?
 - Did anything break, fail, or get forgotten?
 -->

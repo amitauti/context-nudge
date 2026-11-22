@@ -16,7 +16,7 @@ When your chat starts feeling slow or forgetful:
 
 ### 1. In your current (heavy) chat: Create the handoff note
 Copy the prompt in [ledger-prompt.md](ledger-prompt.md) and paste it into your chat.
-The AI will generate a concise, 6-section **handoff ledger** (under 250 words) listing your goals, decisions with reasons, rules/preferences, references, open questions, and the immediate next step.
+The AI will generate a concise **handoff ledger** (under 250 words) with the date line plus six sections listing your goals, decisions with reasons, rules/preferences, references, open questions, and the immediate next step.
 
 ### 2. Copy the ledger
 Copy the AI's generated ledger text. (You can also save it into a text document or notes app if you want a permanent project record.)
@@ -31,7 +31,7 @@ The new AI chat will confirm your goal and next step, treat all previous decisio
 
 ## What Is in This Kit
 
-- **[ledger-prompt.md](ledger-prompt.md)**: The prompt to paste into your current chat to produce a 250-word structured handoff note.
+- **[ledger-prompt.md](ledger-prompt.md)**: The prompt to paste into your current chat to produce a 250-word structured handoff note (date line plus six sections).
 - **[restart-prompt.md](restart-prompt.md)**: The prompt to paste into your new chat so it picks up where you left off and honors your settled decisions.
 - **[how-to-know-a-chat-is-heavy.md](how-to-know-a-chat-is-heavy.md)**: Everyday signs that your chat needs a restart—no token counting or technical tools needed.
 - **Worked Examples in [examples/](examples/)**:

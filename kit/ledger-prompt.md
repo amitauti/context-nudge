@@ -10,8 +10,7 @@ Please pause and create a concise handoff ledger for this conversation so I can 
 Format rules:
 1. Hard cap: Under 250 words total. Keep bullets terse and compact (short fragments, no conversational fluff).
 2. Bullets only. No conversational opening, closing, or narrative prose outside the sections.
-3. Start with the date line on top: "Date: YYYY-MM-DD" (use today's date).
-4. Use exactly these six sections in this order:
+3. Output the date line plus six sections in this order (start with today's date):
 
 ## Date: YYYY-MM-DD
 ## Goal / status (max 3 bullets: current objective and current milestone)
